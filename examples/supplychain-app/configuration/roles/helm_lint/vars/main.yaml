@@ -1,0 +1,8 @@
+charts:
+  restserver: fabric-restserver
+  expressapi: expressapp
+  expressapi-fabric: expressapp
+  webserver: springbootwebserver
+  webserver-ent: springbootwebserver
+  frontend: frontend
+  expressapi-quorum: expressapp-quorum

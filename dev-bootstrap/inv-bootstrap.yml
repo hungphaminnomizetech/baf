@@ -1,0 +1,19 @@
+  ---
+# Ansible inventory - used by dev-bootstrap only
+#
+# Located outside main ansible/inv directory to avoid inheriting unwanted SSH vars from main group_vars/all
+
+all:
+  vars:
+    ansible_connection: local
+    # Required to use python3 in virtualenv
+    ansible_python_interpreter: python
+
+  children:
+
+    local:
+      hosts:
+        localhost: {}
+
+      vars:
+        inventory_ok: "true"

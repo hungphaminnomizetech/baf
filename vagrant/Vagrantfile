@@ -1,0 +1,121 @@
+# Generally you should be able to just 'vagrant up' to get a VM.
+#
+# Default is Ubuntu 20.04.  **CentOS is not recommended**
+#
+# For larger RAM, use 'VAGRANT_MEMORY=2048 vagrant up' when creating VM
+#  - not required unless you are running server code in same VM
+#  - after VM is created, you can just 'vagrant up' to re-run it.
+#
+# For CentOS 7 (not recommended), create using 'VAGRANT_DISTRO=centos vagrant up'
+#
+# Supports Hyper-V, VMware, VirtualBox and Parallels.  (VirtualBox has caused macOS
+# crashes in some cases on macOS hosts, so it's best avoided.)
+#
+# If you have only one hypervisor installed, just do 'vagrant up'.
+#
+# If more than one, see below - only needed when creating the VM:
+#
+#   - For Hyper-V, use 'vagrant up --provider hyperv'
+#   - For Parallels, use 'vagrant up --provider parallels'
+#   - For VMware Fusion/Workstation, use 'vagrant up --provider vmware_desktop'
+#   - For VirtualBox, use 'vagrant up --provider virtualbox'
+
+# Parallels note:
+#
+#   - install Vagrant provider using 'vagrant plugin install vagrant-parallels' before creating VM
+#
+# VMware note:
+#
+# - due to upcoming change in Vagrant for VMware, it may be required to add this code to
+#   the VMware config.vm.provider section if networking fails to be configured correctly.
+#
+#         this_vm.vmx["ethernet0.pcislotnumber"] = "32"
+#
+# - details: https://www.vagrantup.com/docs/vmware/boxes.html#vmx-whitelisting
+# - can ignore unless an error is seen
+
+Vagrant.configure("2") do |config|
+    # Find top dir of repo regardless of this dir's location, in the typical case
+    # where AUTO_OPS env var not set in host OS
+    auto_ops_path = ENV['AUTO_OPS'] || `git rev-parse --show-toplevel`
+  
+    # Distro defaults to ubuntu if not set
+    distro = ENV['VAGRANT_DISTRO'] || 'ubuntu'
+    memory_mb = ENV['VAGRANT_MEMORY'] || 4096
+  
+    # Config for all hypervisors - selected based on your platform during 'vagrant up'
+    # Set Vagrant box - Ubuntu box version often depends on hypervisor
+    config.vm.provider "hyperv" do |this_vm|
+      if distro == 'ubuntu' then
+        config.vm.box = 'bento/ubuntu-20.04'      # Avoid ubuntu/bionic64
+        config.vm.box_version = '202005.21.0'
+      elsif distro == 'centos' then
+        config.vm.box = "centos/7"
+        config.vm.box_version = '1905.1'
+      else
+        abort('VAGRANT_DISTRO must be centos or ubuntu, if set')
+      end
+      this_vm.memory = memory_mb
+      this_vm.cpus = 1
+      this_vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant", "1"]
+    end
+  
+    config.vm.provider "parallels" do |this_vm|
+      if distro == 'ubuntu' then
+        config.vm.box = "bento/ubuntu-20.04"      # Avoid ubuntu/bionic64
+        config.vm.box_version = '202005.21.0'
+      elsif distro == 'centos' then
+        config.vm.box = 'centos/7'
+        config.vm.box_version = '1905.1'
+      else
+        abort('VAGRANT_DISTRO must be centos or ubuntu, if set')
+      end
+      this_vm.memory = memory_mb
+      this_vm.cpus = 1
+      this_vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant", "1"]
+    end
+  
+    config.vm.provider "vmware_desktop" do |this_vm|
+      if distro == 'ubuntu' then
+        config.vm.box = "bento/ubuntu-20.04"      # Avoid ubuntu/bionic64
+        config.vm.box_version = '202005.21.0'
+      elsif distro == 'centos' then
+        config.vm.box = 'centos/7'
+        config.vm.box_version = '1905.1'
+      else
+        abort('VAGRANT_DISTRO must be centos or ubuntu, if set')
+      end
+      this_vm.memory = memory_mb
+      this_vm.cpus = 1
+      this_vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant", "1"]
+    end
+  
+    config.vm.provider "virtualbox" do |this_vm|
+      if distro == 'ubuntu' then
+        config.vm.box = "bento/ubuntu-20.04"      # Avoid ubuntu/bionic64
+        config.vm.box_version = '202005.21.0'
+      elsif distro == 'centos' then
+        config.vm.box = "centos/7"
+        config.vm.box_version = "1905.1"
+      else
+        abort('VAGRANT_DISTRO must be centos or ubuntu, if set')
+      end
+      this_vm.memory = memory_mb
+      this_vm.cpus = 4
+      this_vm.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/vagrant", "1"]
+    end
+  
+    # Recommended to have working SSH agent setup on host OS (Windows, Linux or Mac), to enable SSH to target servers
+    config.ssh.forward_agent = true
+  
+    # Share host folders (first param) into guest, using vboxsf (virtualbox), SMB (hyperv) or hgfs (VMware)
+    # - for SMB, you will need to provide your normal Windows login (local administrator rights required)
+    # to create an SMB share on the Windows host.  Host paths are relative to vagrant dir in repo
+    config.vm.synced_folder '../', '/vagrant'
+  
+    # Run the bootstrap script
+    # NOTE: if your 'vagrant up' fails for some reason, you can 'vagrant ssh' into the VM and
+    # run the above commands manually
+    config.vm.provision "shell", privileged: true, path: "../dev-bootstrap/main.sh"
+  end
+  

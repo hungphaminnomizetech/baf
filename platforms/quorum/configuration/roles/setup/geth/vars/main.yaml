@@ -1,0 +1,3 @@
+---
+geth:
+  repo: https://github.com/ConsenSys/quorum.git
